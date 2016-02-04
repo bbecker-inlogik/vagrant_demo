@@ -1,3 +1,5 @@
+Vagrant Installation
+
 ====================
 Windows installation
 ====================
@@ -5,13 +7,13 @@ download and install
 VirtualBox	virtualbox.org
 Vagrant		vagrantup.com
 
-or use chocolatey.org
+in the spirit of automation use chocolatey.org
 ------------------------
 Run commands from website in admin cmd or admin Powershell to install chocolatey
 
-restart cmd or powershell
+restart cmd or powershell (path needs to be refreshed)
 from cmd or powershell run choco /? for a list of functions
-run cinst vagrant virtualbox tortoisegit
+run cinst vagrant virtualbox
  - cinst is shorthand for choco install
 
 Also need ssh and rsync 
@@ -40,8 +42,10 @@ to use home type ~
 
 Avoid mixing cygwin and standard command since home directories are different can lead to confusion
 
-======
-mac install use homebrew, brew.sh
+===================
+Mac installation
+===================
+use homebrew, www.brew.sh
 brew tap caskroom/cask
 brew install brew-cask 
 brew cask install vagrant virtualbox
@@ -64,6 +68,9 @@ sudo apt-get update
 sudo apt-get -y install virtualbox-4.3 dkms
 
 +++++++++++++++++++
+Getting started
++++++++++++++++++++
+
 check from command or cygwin that vagrant, virtualbox and ssh is working by typing:
 vagrant -v
 vboxmanage -v
@@ -84,7 +91,7 @@ exit  -to end ssh session
 vboxmanage list runningvms
 vboxmanage list vms
 
-vagrant be default runs headless
+vagrant by default runs headless
 to run with a GUI uncomment the following lines in the vagrantfile:
 	config.vm.provider "virtualbox" do |vb|
      # Display the VirtualBox GUI when booting the machine
@@ -100,18 +107,19 @@ vagrant operates on the vm located in the current directory so make sure you are
 
 Stopping and starting vms
 -------------------------
-to hibernate use: 
+to hibernate use: 	fast to resume but uses more memory
 vagrant suspend
 vagrant resume
 vagrant ssh
-	fast to resume but uses more memory
 
 to shutdown use:
 vagrant halt
 
 to restart use:
 vagrant up
-vagrant ssh
+or
+vagrant reload //same as vagrant halt and vagrant up
+
 
 To remove a vm:
 ---------------
@@ -127,7 +135,8 @@ for Help use
 vagrant -h
 vagrant status --debug
 
-
+Note on line endings:
+--------------------
 If working on linux guest on windows host end of line feeds can be an issue.
 add a .gitattributes file to the root git directory
 for linux projects:
@@ -155,40 +164,70 @@ install package control , https://packagecontrol.io/installation
 tools > command palette
 ctrl+shift+P and type package Control: install package search for editorconfig and install
 
+----------
+DEMO
+----------
 mkdir nginx
 cd nginx
 
 vagrant init hashicorp/precise32 --minimal
 
-open Vagrantfile
- can edit config
+Provisioning:
+open Vagrantfile and add
+  config.vm.hostname = "web-dev"
+
+  config.vm.provision "shell", path: "provision.sh"
+
+add provision.sh and modify
+	apt-get -y update
+
+	apt-get -y install nginx
+
+	service nginx start
  
 vagrant up
-ssh
-exit
-
-Each project will have a Vagrantfile committed to version control
-git init
-
-Base image is called a box
-
-to install or configure use
-Provisioning:
-add to Vagrantfile and save:
-  congig.vm.provision "shell", path: "provision.sh"
-
-add commands to the sh file and save.
-
-vagrant reload //same as vagrant halt and vagrant up
-  //this will not rerun the provisioning since it is only run on the first vagrant up
-
-vagrant provision
-
 vagrant ssh
 service nginx status
 wget -qO- localhost
 
-default shared folder is located in /vagrant on guest 
+We want to view website from the host.
+open Vagrantfile and add
+  config.vm.network "forwarded_port", guest: 80, host: 8080, id: "nginx"
+
+vagrant reload //same as vagrant halt and vagrant up
+
+On host visit localhost:8080
+
+We want out source code in the shared folder so we can edit on the host.
+ls /usr/share/nginx/www
+ls /vagrant
+ //default shared folder is located in /vagrant on guest 
+cp -r /user/share/nginx/www /vagrant/
+
+rm -rf /usr/share/nginx/www
+ln -s /vagrant/www /usr/share/nginx/www
+
+edit html file on host and reload website
+
+vagrant reload
+reload website
+
+Our link creation has been lost so add it to the provision.sh
+	apt-get -y update
+
+	apt-get -y install nginx
+
+	rm -rf /usr/share/nginx/www
+	ln -s /vagrant/www /usr/share/nginx/www
+
+	service nginx start
+
+vagrant reload
+  //this will not rerun the provisioning since it is only run on the first vagrant up
+vagrant provision
+ or 
+vagrant destroy
+vagrant up
 
 Provisioning Benefits:
 knowledge of environment setup is retained
@@ -197,5 +236,4 @@ Test environment same as production
 Can commit setup to version control
 Can rollback to last known working configuration if something goes wrong
 
-if you share your vm publicly make sure to overwrite the default ssh that comes with the box in your provisioning
-
+If you share your vm publicly make sure to overwrite the default ssh keys that come with the box as part of your provisioning.
